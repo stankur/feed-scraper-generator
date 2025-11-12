@@ -17,7 +17,7 @@ async function formatHtml(html: string): Promise<string> {
 
 export async function renderFetch(url: string): Promise<string> {
 	const browser = await puppeteer.launch({
-		headless: "new",
+		headless: true,
 	});
 
 	const page = await browser.newPage();
@@ -62,7 +62,9 @@ export async function renderFetch(url: string): Promise<string> {
 				h: document.documentElement.scrollHeight,
 			}));
 			console.error(
-				`[end-scroll] no growth after ${i + 1} iters (pos ${y + ih}/${h})`
+				`[end-scroll] no growth after ${i + 1} iters (pos ${
+					y + ih
+				}/${h})`
 			);
 			break;
 		}
@@ -101,5 +103,3 @@ export async function renderFetchToFile(
 	await fs.writeFile(absPath, html, "utf8");
 	return absPath;
 }
-
-

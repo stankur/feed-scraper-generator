@@ -1,18 +1,24 @@
-// rf-scrape.js (ESM)
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-function parseArgs(argv) {
+type ParsedArgs = {
+	name: string;
+	maxPages: number;
+	stdout: boolean;
+	output: string;
+};
+
+function parseArgs(argv: string[]): ParsedArgs {
 	const args = argv.slice(2);
 	const name = args[0];
-	const get = (k, d) => {
+	const get = (k: string, d: string): string => {
 		const i = args.indexOf(k);
-		return i >= 0 ? args[i + 1] : d;
+		return i >= 0 ? (args[i + 1] as string) : d;
 	};
-	const has = (k) => args.includes(k);
+	const has = (k: string): boolean => args.includes(k);
 	if (!name) {
 		console.error(
-			'Usage: node rf-scrape.js <name> [--max-pages N] [--stdout | --output <path>]'
+			'Usage: tsx rf-scrape.ts <name> [--max-pages N] [--stdout | --output <path>]'
 		);
 		process.exit(1);
 	}
@@ -26,7 +32,7 @@ function parseArgs(argv) {
 	return { name, maxPages, stdout, output };
 }
 
-function allowedOutputFor(name, outPath) {
+function allowedOutputFor(name: string, outPath: string): string {
 	const abs = path.resolve(outPath);
 	const allowed = path.resolve(`${name}_scraper`, `${name}.json`);
 	if (abs !== allowed) {
@@ -35,14 +41,14 @@ function allowedOutputFor(name, outPath) {
 	return abs;
 }
 
-async function main() {
+async function main(): Promise<void> {
 	const { name, maxPages, stdout, output } = parseArgs(process.argv);
 
-	const modPath = `./${name}_scraper/scraper.js`;
-	let mod;
+	const modPath = `./${name}_scraper/scraper.ts`;
+	let mod: any;
 	try {
 		mod = await import(modPath);
-	} catch (e) {
+	} catch (e: any) {
 		console.error(`Failed to load ${modPath}: ${e?.message || e}`);
 		process.exit(1);
 	}
@@ -57,7 +63,7 @@ async function main() {
 	// minimal validation
 	if (!Array.isArray(items)) throw new Error('Output is not an array');
 	for (let i = 0; i < items.length; i++) {
-		const it = items[i];
+		const it = items[i] as any;
 		if (!it?.title || !it?.url || !it?.date) {
 			throw new Error(`Item #${i} missing fields: ${JSON.stringify(it)}`);
 		}
@@ -74,7 +80,7 @@ async function main() {
 	}
 }
 
-main().catch((err) => {
+main().catch((err: any) => {
 	console.error(err?.stack || err);
 	process.exit(1);
 });
