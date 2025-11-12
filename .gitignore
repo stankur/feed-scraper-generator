@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.env
+outputs/
+*_scraper/*.json
+
+
