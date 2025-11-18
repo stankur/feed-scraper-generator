@@ -7,12 +7,21 @@ import type {
 	SDKPartialAssistantMessage,
 	SDKResultMessage,
 	SDKSystemMessage,
+	HookInput,
+	PreToolUseHookInput,
+	PostToolUseHookInput,
 } from "@anthropic-ai/claude-agent-sdk";
 import { renderFetchToFile } from "./render-fetch.js";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-type RunArgs = { name: string; url?: string; htmlPath?: string };
+type RunArgs = {
+	name: string;
+	url?: string;
+	htmlPath?: string;
+	loadMore?: string | string[];
+	maxClicks?: number;
+};
 
 async function extractPrompts(): Promise<{ first: string; second: string }> {
 	const first = await fs.readFile(path.resolve("prompts/first.md"), "utf8");
@@ -40,7 +49,33 @@ function printPartial(tag: string, m: SDKPartialAssistantMessage): void {
 	}
 }
 
-function withHooks(base: Options): Options {
+// Type guards
+export function isPreToolUseHookInput(
+	input: HookInput
+): input is PreToolUseHookInput {
+	return input.hook_event_name === "PreToolUse";
+}
+
+export function isPostToolUseHookInput(
+	input: HookInput
+): input is PostToolUseHookInput {
+	return input.hook_event_name === "PostToolUse";
+}
+
+// Path validation for write blocking
+export function validateWritePath(filePath: string, scraperName: string): void {
+	const abs = path.resolve(filePath);
+	const scraperRoot = path.resolve(process.cwd(), `${scraperName}_scraper`);
+	const allowed =
+		abs === scraperRoot || abs.startsWith(scraperRoot + path.sep);
+	if (!allowed) {
+		throw new Error(
+			`Write/Edit blocked: ${abs}. Allowed only under ${scraperRoot}`
+		);
+	}
+}
+
+function withHooks(base: Options, name: string): Options {
 	return {
 		...base,
 		hooks: {
@@ -48,9 +83,16 @@ function withHooks(base: Options): Options {
 				{
 					hooks: [
 						async (input) => {
-							const anyIn: any = input;
-							const tool = anyIn.tool_name;
-							const tin = anyIn.tool_input;
+							if (!isPreToolUseHookInput(input)) {
+								return {};
+							}
+							const tool = input.tool_name;
+							const tin = input.tool_input as any;
+							// Enforce edit/write restrictions: only allow edits/writes inside <name>_scraper/**
+							if (tool === "Write" || tool === "Edit") {
+								const filePath = String(tin.file_path || "");
+								validateWritePath(filePath, name);
+							}
 							if (tool === "Grep") {
 								console.log(
 									`[tool][Grep] pattern=${tin.pattern} path=${
@@ -79,9 +121,11 @@ function withHooks(base: Options): Options {
 				{
 					hooks: [
 						async (input) => {
-							const anyIn: any = input;
-							const tool = anyIn.tool_name;
-							const tout = anyIn.tool_response;
+							if (!isPostToolUseHookInput(input)) {
+								return {};
+							}
+							const tool = input.tool_name;
+							const tout = input.tool_response as any;
 							if (tool === "Bash") {
 								const out = tout?.output ?? "";
 								if (out) process.stdout.write(out);
@@ -141,11 +185,26 @@ async function streamOnce(
 	}
 }
 
-export async function run({ name, url, htmlPath }: RunArgs): Promise<void> {
+export async function run({
+	name,
+	url,
+	htmlPath,
+	loadMore,
+	maxClicks,
+}: RunArgs): Promise<void> {
 	const defaultOut = path.join("outputs", "html", `${name}.html`);
 	const html = htmlPath ?? defaultOut;
 	if (!htmlPath && url) {
-		await renderFetchToFile(url, html);
+		await renderFetchToFile(url, html, {
+			loadMore:
+				typeof loadMore === "string" && loadMore.includes(",")
+					? loadMore
+							.split(",")
+							.map((s) => s.trim())
+							.filter(Boolean)
+					: loadMore,
+			maxClicks,
+		});
 		console.log(`[fetch] ${url} -> ${html}`);
 	}
 
@@ -159,10 +218,8 @@ export async function run({ name, url, htmlPath }: RunArgs): Promise<void> {
 		includePartialMessages: true,
 		permissionMode: "bypassPermissions",
 	};
-	const opts = withHooks(base);
+	const opts = withHooks(base, name);
 
 	await streamOnce(firstMsg, opts, "[T1]");
 	await streamOnce(secondMsg, { ...opts, continue: true }, "[T2]");
 }
-
-

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "rf-scrape.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
     "rf": "tsx rf-cli.ts",
     "rf-scrape": "node rf-scrape.js"
   },
@@ -15,7 +15,8 @@
   "description": "",
   "devDependencies": {
     "tsx": "^4.20.6",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^2.1.8"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.1.37",

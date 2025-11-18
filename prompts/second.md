@@ -7,6 +7,15 @@ Export a programmatic API:
 -   Page 1: always `await renderFetch(SEED_URL)`; if pagination exists and `maxPages > 1`, compute next page URLs and `await renderFetch(nextUrl)` for pages 2..maxPages.
 -   Extract items in DOM/top-to-bottom order and return a single array of `{ title, url, date }` (strings exactly as shown; never reformat dates).
 
+If the site uses a "Load more" button instead of next-page navigation, call `renderFetch` with a selector and map `maxPages` to the number of clicks:
+
+```ts
+await renderFetch(SEED_URL, {
+	loadMore: "<CSS_SELECTOR>",
+	maxClicks: Math.max(0, maxPages - 1),
+});
+```
+
 I want the dates, if existing to be written exactly as shown, please do not modify the wording. For instance if some articles are written in relative format like 5d ago, and some in absolute like 12 Aug 2024, I want you to write EXACTLY as that in the final JSON. please just write the date. Do not for example append categories.
 
 if there is pagination, handle it immediately in this turn, don't ask for my confirmation, because you will be running autonomously, and I can't make more chat turns. So you need to be complete.
@@ -29,3 +38,4 @@ I/O constraints:
 -   No other files may be written (no `package.json`, no README, no analysis files).
 -   Allowed commands: `rg`/`grep`, `node rf-scrape.js`, optionally `cat` to inspect JSON.
 -   Do not install packages. Use Node + Cheerio + `renderFetch` from `../render-fetch`.
+-   Import statement: Use `import { renderFetch } from '../render-fetch';` (no extension, relative path from `<name>_scraper/scraper.ts` to root `render-fetch.ts`). Do NOT use `@` prefix or any other import syntax.
