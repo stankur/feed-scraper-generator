@@ -19,7 +19,7 @@ type RunArgs = {
 	name: string;
 	url?: string;
 	htmlPath?: string;
-	loadMore?: string | string[];
+	loadMore?: string;
 	maxClicks?: number;
 };
 
@@ -196,13 +196,7 @@ export async function run({
 	const html = htmlPath ?? defaultOut;
 	if (!htmlPath && url) {
 		await renderFetchToFile(url, html, {
-			loadMore:
-				typeof loadMore === "string" && loadMore.includes(",")
-					? loadMore
-							.split(",")
-							.map((s) => s.trim())
-							.filter(Boolean)
-					: loadMore,
+			loadMore,
 			maxClicks,
 		});
 		console.log(`[fetch] ${url} -> ${html}`);

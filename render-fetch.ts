@@ -7,7 +7,7 @@ import rehypeFormat from "rehype-format";
 import rehypeStringify from "rehype-stringify";
 
 interface RenderOptions {
-	loadMore?: string | string[];
+	loadMore?: string;
 	maxClicks?: number;
 }
 
@@ -20,7 +20,10 @@ async function formatHtml(html: string): Promise<string> {
 	return String(file);
 }
 
-export async function renderFetch(url: string, options: RenderOptions = {}): Promise<string> {
+export async function renderFetch(
+	url: string,
+	options: RenderOptions = {}
+): Promise<string> {
 	const browser = await puppeteer.launch({
 		headless: true,
 	});
@@ -90,55 +93,45 @@ export async function renderFetch(url: string, options: RenderOptions = {}): Pro
 		}
 	});
 
-	const selectors: string[] = Array.isArray(options.loadMore)
-		? options.loadMore
-		: typeof options.loadMore === "string"
-		? [options.loadMore]
-		: [];
+	const selector = options.loadMore || "";
 	const maxClicks =
 		typeof options.maxClicks === "number" ? options.maxClicks : 30;
 	const waitAfterClickMs = 1500;
 
-	if (selectors.length > 0 && maxClicks > 0) {
+	if (selector && maxClicks > 0) {
 		let clicks = 0;
 		for (; clicks < maxClicks; clicks++) {
 			const before = await page.evaluate(
 				() => document.documentElement.scrollHeight
 			);
 
-			let clicked = false;
-			for (const sel of selectors) {
-				try {
-					// Prefer visible, enabled elements
-					const ok = await page.$eval(sel, (el: Element) => {
-						const anyEl = el as any;
-						const style = window.getComputedStyle(
-							el as HTMLElement
-						);
-						const visible =
-							style &&
-							style.visibility !== "hidden" &&
-							style.display !== "none" &&
-							(el as HTMLElement).offsetParent !== null;
-						const enabled = !(anyEl.disabled === true);
-						return visible && enabled;
-					});
-					if (!ok) continue;
-					await page.click(sel, { delay: 20 });
-					clicked = true;
+			try {
+				const ok = await page.$eval(selector, (el: Element) => {
+					const anyEl = el as any;
+					const style = window.getComputedStyle(el as HTMLElement);
+					const visible =
+						style &&
+						style.visibility !== "hidden" &&
+						style.display !== "none" &&
+						(el as HTMLElement).offsetParent !== null;
+					const enabled = !(anyEl.disabled === true);
+					return visible && enabled;
+				});
+				if (!ok) {
 					console.error(
-						`[load-more] click #${
-							clicks + 1
-						} using selector "${sel}"`
+						"[load-more] selector found but not visible/enabled; stopping"
 					);
 					break;
-				} catch {
-					// try next selector
 				}
-			}
-			if (!clicked) {
+				await page.click(selector, { delay: 20 });
 				console.error(
-					"[load-more] no clickable selector found; stopping"
+					`[load-more] click #${
+						clicks + 1
+					} using selector "${selector}"`
+				);
+			} catch {
+				console.error(
+					"[load-more] selector not found or not clickable; stopping"
 				);
 				break;
 			}
