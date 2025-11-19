@@ -2,10 +2,10 @@ Create or update a single file `<name>_scraper/scraper.ts`. Do NOT initialize np
 
 Export a programmatic API:
 
--   `export async function scrape({ maxPages = 1 } = {}): Promise<Array<{title:string,url:string,date:string}>>`
+-   `export async function scrape({ maxPages = 1 } = {}): Promise<Array<{title:string,url:string,date:string|null}>>`
 -   Inside the file define `const SEED_URL = 'https://...'` (the blog listing URL).
 -   Page 1: always `await renderFetch(SEED_URL)`; if pagination exists and `maxPages > 1`, compute next page URLs and `await renderFetch(nextUrl)` for pages 2..maxPages.
--   Extract items in DOM/top-to-bottom order and return a single array of `{ title, url, date }` (strings exactly as shown; never reformat dates).
+-   Extract items in DOM/top-to-bottom order and return a single array of `{ title, url, date }` (strings exactly as shown; never reformat dates; date may be null if truly absent from HTML).
 
 If the site uses a "Load more" button instead of next-page navigation, call `renderFetch` with a selector and map `maxPages` to the number of clicks:
 
@@ -16,14 +16,16 @@ await renderFetch(SEED_URL, {
 });
 ```
 
-I want the dates, if existing to be written exactly as shown, please do not modify the wording. For instance if some articles are written in relative format like 5d ago, and some in absolute like 12 Aug 2024, I want you to write EXACTLY as that in the final JSON. please just write the date. Do not for example append categories.
+I want the dates, if existing to be written exactly as shown, please do not modify the wording. For instance if some articles are written in relative format like 5d ago, and some in absolute like 12 Aug 2024, I want you to write EXACTLY as that in the final JSON. Try hard to find dates—check post metadata, time tags, nearby text. Only use `date: null` if no date information exists anywhere near that post in the HTML. Do not append categories or other text to dates.
+
+However, if there is the date in the HTML, while not visible, just use that. in whatever text format (just the date) is in there.
 
 if there is pagination, handle it immediately in this turn, don't ask for my confirmation, because you will be running autonomously, and I can't make more chat turns. So you need to be complete.
 
 Validation (must run inside the function before returning):
 
--   Result is an array and every item has non-empty `title`, `url`, and `date`.
--   If some items are missing fields while others are present, fix selectors and re-run, or throw an Error with a concise justification.
+-   Result is an array and every item has non-empty `title` and `url`. Date should be extracted when present; null is acceptable only when no date info exists in the HTML.
+-   If some items are missing `title` or `url`, fix selectors and re-run, or throw an Error with a concise justification. Missing dates are acceptable if the HTML truly lacks date information for those posts. but make sure you verify that the date is not there.
 
 Run and verify via the root CLI (only allowed runner):
 
@@ -39,3 +41,5 @@ I/O constraints:
 -   Allowed commands: `rg`/`grep`, `node rf-scrape.js`, optionally `cat` to inspect JSON.
 -   Do not install packages. Use Node + Cheerio + `renderFetch` from `../render-fetch`.
 -   Import statement: Use `import { renderFetch } from '../render-fetch';` (no extension, relative path from `<name>_scraper/scraper.ts` to root `render-fetch.ts`). Do NOT use `@` prefix or any other import syntax.
+
+[warning] if you want to change the scraper to extract something using a regex pattern, test the regex pattern first, before incorporating to the scraper. only change the scraper once you are sure that the regex pattern work. Please take note of this because it often comes as tricky for you.

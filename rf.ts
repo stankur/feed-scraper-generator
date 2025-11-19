@@ -159,13 +159,19 @@ async function streamOnce(
 	prompt: string,
 	options: Options,
 	tag: string
-): Promise<SDKResultMessage | null> {
+): Promise<{ result: SDKResultMessage | null; sessionId: string | undefined }> {
 	const q = query({ prompt, options });
 	let result: SDKResultMessage | null = null;
+	let sessionId: string | undefined;
 	for await (const msg of q as unknown as AsyncGenerator<SDKMessage, void>) {
 		switch (msg.type) {
 			case "system": {
 				const s = msg as SDKSystemMessage;
+				const sysMsg = s as any;
+				if (sysMsg.session_id) {
+					sessionId = sysMsg.session_id;
+					console.log(`${tag} [session] ${sessionId}`);
+				}
 				console.log(
 					`${tag} [system] tools=${(s.tools || []).join(
 						", "
@@ -193,7 +199,7 @@ async function streamOnce(
 				break;
 		}
 	}
-	return result;
+	return { result, sessionId };
 }
 
 export async function run({
@@ -226,34 +232,45 @@ export async function run({
 
 	const ctx1: RunContext = { tools: new Set(), grepPatterns: new Set() };
 	const opts1 = withHooks(base, name, ctx1);
-	const result1 = await streamOnce(firstMsg, opts1, "[T1]");
+	const { result: result1, sessionId } = await streamOnce(
+		firstMsg,
+		opts1,
+		"[T1]"
+	);
+
+	if (!sessionId) {
+		throw new Error("Failed to get session ID from first turn");
+	}
 
 	const ctx2: RunContext = { tools: new Set(), grepPatterns: new Set() };
 	const opts2 = withHooks(base, name, ctx2);
-	const result2 = await streamOnce(
+	const { result: result2 } = await streamOnce(
 		secondMsg,
-		{ ...opts2, continue: true },
+		{ ...opts2, resume: sessionId },
 		"[T2]"
 	);
 
-	// Write cost.json
-	const costData = {
+	// Write run.json
+	const cost1 = result1?.total_cost_usd ?? 0;
+	const cost2 = result2?.total_cost_usd ?? 0;
+	const runData = {
+		total_cost_usd: cost1 + cost2,
 		first: {
-			cost_usd: result1?.total_cost_usd ?? 0,
+			cost_usd: cost1,
 			turns: result1?.num_turns ?? 0,
 			tools: Array.from(ctx1.tools).sort(),
 			grep_patterns: Array.from(ctx1.grepPatterns).sort(),
 		},
 		second: {
-			cost_usd: result2?.total_cost_usd ?? 0,
+			cost_usd: cost2,
 			turns: result2?.num_turns ?? 0,
 			tools: Array.from(ctx2.tools).sort(),
 			grep_patterns: Array.from(ctx2.grepPatterns).sort(),
 		},
 	};
 
-	const costPath = path.join(`${name}_scraper`, "cost.json");
-	await fs.mkdir(path.dirname(costPath), { recursive: true });
-	await fs.writeFile(costPath, JSON.stringify(costData, null, 2), "utf8");
-	console.log(`[cost] wrote ${costPath}`);
+	const runPath = path.join(`${name}_scraper`, "run.json");
+	await fs.mkdir(path.dirname(runPath), { recursive: true });
+	await fs.writeFile(runPath, JSON.stringify(runData, null, 2), "utf8");
+	console.log(`[run] wrote ${runPath}`);
 }

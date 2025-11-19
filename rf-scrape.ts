@@ -1,5 +1,5 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
+import fs from "node:fs/promises";
+import path from "node:path";
 
 type ParsedArgs = {
 	name: string;
@@ -18,15 +18,15 @@ function parseArgs(argv: string[]): ParsedArgs {
 	const has = (k: string): boolean => args.includes(k);
 	if (!name) {
 		console.error(
-			'Usage: tsx rf-scrape.ts <name> [--max-pages N] [--stdout | --output <path>]'
+			"Usage: tsx rf-scrape.ts <name> [--max-pages N] [--stdout | --output <path>]"
 		);
 		process.exit(1);
 	}
-	const maxPages = parseInt(get('--max-pages', '1'), 10);
-	const stdout = has('--stdout');
-	const output = get('--output', '');
+	const maxPages = parseInt(get("--max-pages", "1"), 10);
+	const stdout = has("--stdout");
+	const output = get("--output", "");
 	if (!stdout && !output) {
-		console.error('Choose one: --stdout or --output <path>');
+		console.error("Choose one: --stdout or --output <path>");
 		process.exit(1);
 	}
 	return { name, maxPages, stdout, output };
@@ -53,29 +53,40 @@ async function main(): Promise<void> {
 		process.exit(1);
 	}
 
-	if (typeof mod.scrape !== 'function') {
-		console.error(`${modPath} must export async function scrape({ maxPages })`);
+	if (typeof mod.scrape !== "function") {
+		console.error(
+			`${modPath} must export async function scrape({ maxPages })`
+		);
 		process.exit(1);
 	}
 
 	const items = await mod.scrape({ maxPages });
 
 	// minimal validation
-	if (!Array.isArray(items)) throw new Error('Output is not an array');
+	if (!Array.isArray(items)) throw new Error("Output is not an array");
+	let nullDates = 0;
 	for (let i = 0; i < items.length; i++) {
 		const it = items[i] as any;
-		if (!it?.title || !it?.url || !it?.date) {
-			throw new Error(`Item #${i} missing fields: ${JSON.stringify(it)}`);
+		if (!it?.title || !it?.url) {
+			throw new Error(
+				`Item #${i} missing title or url: ${JSON.stringify(it)}`
+			);
 		}
+		if (!it?.date) nullDates++;
+	}
+	if (nullDates > 0) {
+		console.warn(
+			`Warning: ${nullDates}/${items.length} items have null dates`
+		);
 	}
 
 	const json = JSON.stringify(items, null, 2);
 	if (stdout) {
-		process.stdout.write(json + '\n');
+		process.stdout.write(json + "\n");
 	} else {
 		const abs = allowedOutputFor(name, output);
 		await fs.mkdir(path.dirname(abs), { recursive: true });
-		await fs.writeFile(abs, json, 'utf8');
+		await fs.writeFile(abs, json, "utf8");
 		console.error(`wrote ${abs}`);
 	}
 }
@@ -84,6 +95,3 @@ main().catch((err: any) => {
 	console.error(err?.stack || err);
 	process.exit(1);
 });
-
-
-
