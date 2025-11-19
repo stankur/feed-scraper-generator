@@ -1,0 +1,13 @@
+[
+	{
+		"name": "instacart",
+		"url": "https://corporate.instacart.com/company/press-releases",
+		"loadMore": "button.show-more",
+		"maxClicks": 20
+	},
+	{
+		"name": "temporal",
+		"url": "https://temporal.io/blog"
+	}
+]
+

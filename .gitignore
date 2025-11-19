@@ -3,3 +3,4 @@ dist/
 .env
 outputs/
 *_scraper/
+jobs.json

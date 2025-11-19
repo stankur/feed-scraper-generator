@@ -23,6 +23,11 @@ type RunArgs = {
 	maxClicks?: number;
 };
 
+type RunContext = {
+	tools: Set<string>;
+	grepPatterns: Set<string>;
+};
+
 async function extractPrompts(): Promise<{ first: string; second: string }> {
 	const first = await fs.readFile(path.resolve("prompts/first.md"), "utf8");
 	const second = await fs.readFile(path.resolve("prompts/second.md"), "utf8");
@@ -75,7 +80,7 @@ export function validateWritePath(filePath: string, scraperName: string): void {
 	}
 }
 
-function withHooks(base: Options, name: string): Options {
+function withHooks(base: Options, name: string, ctx: RunContext): Options {
 	return {
 		...base,
 		hooks: {
@@ -88,12 +93,15 @@ function withHooks(base: Options, name: string): Options {
 							}
 							const tool = input.tool_name;
 							const tin = input.tool_input as any;
+							ctx.tools.add(tool);
 							// Enforce edit/write restrictions: only allow edits/writes inside <name>_scraper/**
 							if (tool === "Write" || tool === "Edit") {
 								const filePath = String(tin.file_path || "");
 								validateWritePath(filePath, name);
 							}
 							if (tool === "Grep") {
+								if (tin.pattern)
+									ctx.grepPatterns.add(tin.pattern);
 								console.log(
 									`[tool][Grep] pattern=${tin.pattern} path=${
 										tin.path ?? "."
@@ -151,8 +159,9 @@ async function streamOnce(
 	prompt: string,
 	options: Options,
 	tag: string
-): Promise<void> {
+): Promise<SDKResultMessage | null> {
 	const q = query({ prompt, options });
+	let result: SDKResultMessage | null = null;
 	for await (const msg of q as unknown as AsyncGenerator<SDKMessage, void>) {
 		switch (msg.type) {
 			case "system": {
@@ -172,6 +181,7 @@ async function streamOnce(
 				break;
 			case "result": {
 				const r = msg as SDKResultMessage;
+				result = r;
 				console.log(
 					`\n${tag} [result] turns=${r.num_turns} cost=$${(
 						r.total_cost_usd ?? 0
@@ -183,6 +193,7 @@ async function streamOnce(
 				break;
 		}
 	}
+	return result;
 }
 
 export async function run({
@@ -212,8 +223,37 @@ export async function run({
 		includePartialMessages: true,
 		permissionMode: "bypassPermissions",
 	};
-	const opts = withHooks(base, name);
 
-	await streamOnce(firstMsg, opts, "[T1]");
-	await streamOnce(secondMsg, { ...opts, continue: true }, "[T2]");
+	const ctx1: RunContext = { tools: new Set(), grepPatterns: new Set() };
+	const opts1 = withHooks(base, name, ctx1);
+	const result1 = await streamOnce(firstMsg, opts1, "[T1]");
+
+	const ctx2: RunContext = { tools: new Set(), grepPatterns: new Set() };
+	const opts2 = withHooks(base, name, ctx2);
+	const result2 = await streamOnce(
+		secondMsg,
+		{ ...opts2, continue: true },
+		"[T2]"
+	);
+
+	// Write cost.json
+	const costData = {
+		first: {
+			cost_usd: result1?.total_cost_usd ?? 0,
+			turns: result1?.num_turns ?? 0,
+			tools: Array.from(ctx1.tools).sort(),
+			grep_patterns: Array.from(ctx1.grepPatterns).sort(),
+		},
+		second: {
+			cost_usd: result2?.total_cost_usd ?? 0,
+			turns: result2?.num_turns ?? 0,
+			tools: Array.from(ctx2.tools).sort(),
+			grep_patterns: Array.from(ctx2.grepPatterns).sort(),
+		},
+	};
+
+	const costPath = path.join(`${name}_scraper`, "cost.json");
+	await fs.mkdir(path.dirname(costPath), { recursive: true });
+	await fs.writeFile(costPath, JSON.stringify(costData, null, 2), "utf8");
+	console.log(`[cost] wrote ${costPath}`);
 }
