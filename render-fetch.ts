@@ -115,7 +115,7 @@ export async function renderFetch(
 	const selector = options.loadMore || "";
 	const maxClicks =
 		typeof options.maxClicks === "number" ? options.maxClicks : 30;
-	const waitAfterClickMs = 1500;
+	const waitAfterClickMs = 5000;
 
 	log(
 		`[render-fetch] load-more: selector="${selector}" maxClicks=${maxClicks}`
@@ -146,15 +146,14 @@ export async function renderFetch(
 					break;
 				}
 				await page.click(selector, { delay: 20 });
+				await new Promise((resolve) => setTimeout(resolve, 2000));
 				log(
 					`[load-more] click #${
 						clicks + 1
 					} using selector "${selector}"`
 				);
-			} catch {
-				log(
-					"[load-more] selector not found or not clickable; stopping"
-				);
+			} catch (err) {
+				log(`[load-more] selector not found or not clickable: ${err}`);
 				break;
 			}
 
@@ -205,4 +204,3 @@ export async function renderFetchToFile(
 	await fs.writeFile(absPath, html, "utf8");
 	return absPath;
 }
-

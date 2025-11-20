@@ -31,3 +31,4 @@ Additional constraints and Load More verification:
     -   `npx tsx html-fetch.ts <url> outputs/html/<name>-verify.html --load-more "<CSS_SELECTOR>" --max-clicks 2`
     -   please NEVER use agent-cli (e.g. do not use npx tsx agent-cli.ts)
 -   Verify success yourself: compare the number of post elements before vs after re-render (e.g., count `<article>`, `.post`, `.card`, or a repeated container). If counts didn't increase, try a better selector.
+-   Logs are in `debug-render-fetch.log` if you need to debug if problems occur or need extra details.

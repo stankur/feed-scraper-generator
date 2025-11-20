@@ -41,5 +41,6 @@ I/O constraints:
 -   Allowed commands: `rg`/`grep`, `tsx scraper-run.ts`, optionally `cat` to inspect JSON.
 -   Do not install packages. Use Node + Cheerio + `renderFetch` from `../render-fetch`.
 -   Import statement: Use `import { renderFetch } from '../render-fetch';` (no extension, relative path from `<name>_scraper/scraper.ts` to root `render-fetch.ts`). Do NOT use `@` prefix or any other import syntax.
+-   Logs are in `debug-render-fetch.log` if you need to debug if problems occur or need extra details.
 
 [warning] if you want to change the scraper to extract something using a regex pattern, test the regex pattern first, before incorporating to the scraper. only change the scraper once you are sure that the regex pattern work. Please take note of this because it often comes as tricky for you.
