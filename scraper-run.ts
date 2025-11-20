@@ -18,7 +18,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 	const has = (k: string): boolean => args.includes(k);
 	if (!name) {
 		console.error(
-			"Usage: tsx rf-scrape.ts <name> [--max-pages N] [--stdout | --output <path>]"
+			"Usage: tsx scraper-run.ts <name> [--max-pages N] [--stdout | --output <path>]"
 		);
 		process.exit(1);
 	}
@@ -95,5 +95,4 @@ main().catch((err: any) => {
 	console.error(err?.stack || err);
 	process.exit(1);
 });
-
 

@@ -3,10 +3,8 @@ import {
 	isPreToolUseHookInput,
 	isPostToolUseHookInput,
 	validateWritePath,
-} from "../rf.js";
+} from "../agent-core";
 import type {
-	PreToolUseHookInput,
-	PostToolUseHookInput,
 	HookInput,
 } from "@anthropic-ai/claude-agent-sdk";
 import path from "node:path";
@@ -113,6 +111,4 @@ describe("validateWritePath", () => {
 		);
 	});
 });
-
-
 

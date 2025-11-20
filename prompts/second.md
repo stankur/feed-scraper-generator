@@ -29,7 +29,7 @@ Validation (must run inside the function before returning):
 
 Run and verify via the root CLI (only allowed runner):
 
--   `tsx rf-scrape.ts <name> --max-pages 3 --output <name>_scraper/<name>.json`
+-   `tsx scraper-run.ts <name> --max-pages 3 --output <name>_scraper/<name>.json`
 -   Then `cat <name>_scraper/<name>.json` and verify every object has title/url/date and matches site text exactly.
 
 Take a look at the date, make sure they are just dates, not meddled with anything else like blog category.
@@ -38,7 +38,7 @@ I/O constraints:
 
 -   Allowed write: only `<name>_scraper/<name>.json` when `--output` is used.
 -   No other files may be written (no `package.json`, no README, no analysis files).
--   Allowed commands: `rg`/`grep`, `node rf-scrape.js`, optionally `cat` to inspect JSON.
+-   Allowed commands: `rg`/`grep`, `tsx scraper-run.ts`, optionally `cat` to inspect JSON.
 -   Do not install packages. Use Node + Cheerio + `renderFetch` from `../render-fetch`.
 -   Import statement: Use `import { renderFetch } from '../render-fetch';` (no extension, relative path from `<name>_scraper/scraper.ts` to root `render-fetch.ts`). Do NOT use `@` prefix or any other import syntax.
 

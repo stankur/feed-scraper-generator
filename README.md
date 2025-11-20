@@ -20,13 +20,13 @@ ANTHROPIC_API_KEY=sk-...
 
 Generate scraper from URL:
 ```bash
-npm run rf <name> <url>
-npm run rf <name> <url> --load-more "<selector>" --max-clicks N
+npm run agent <name> <url>
+npm run agent <name> <url> --load-more "<selector>" --max-clicks N
 ```
 
 Generate scraper from existing HTML:
 ```bash
-npm run rf <name> --html <path>
+npm run agent <name> --html <path>
 ```
 
 ### Multiple Companies
@@ -40,7 +40,7 @@ Create `jobs.json`:
 
 Run batch:
 ```bash
-npm run rf-batch jobs.json
+npm run agent-batch jobs.json
 ```
 
 ## Outputs
@@ -55,8 +55,8 @@ HTML snapshots saved to `outputs/html/<name>.html`
 ## Running Scrapers
 
 ```bash
-npm run rf-scrape <name> --stdout
-npm run rf-scrape <name> --output <name>_scraper/<name>.json --max-pages N
+npm run scraper <name> --stdout
+npm run scraper <name> --output <name>_scraper/<name>.json --max-pages N
 ```
 
 ## Options

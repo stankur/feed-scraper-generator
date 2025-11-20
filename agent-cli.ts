@@ -1,11 +1,11 @@
-import { run } from './rf.js';
+import { run } from './agent-core';
 
 const [, , name, flagOrUrl, maybePath, ...rest] = process.argv;
 
 async function main(): Promise<void> {
 	if (!name) {
 		console.error(
-			'Usage:\n  tsx rf-cli.ts <name> <url> [--load-more "<selector>"] [--max-clicks N]\n  tsx rf-cli.ts <name> --html <path>'
+			'Usage:\n  tsx agent-cli.ts <name> <url> [--load-more "<selector>"] [--max-clicks N]\n  tsx agent-cli.ts <name> --html <path>'
 		);
 		process.exit(1);
 	}
@@ -13,7 +13,7 @@ async function main(): Promise<void> {
 	if (flagOrUrl === '--html') {
 		const htmlPath = maybePath;
 		if (!htmlPath) {
-			console.error('Usage: tsx rf-cli.ts <name> --html <path>');
+			console.error('Usage: tsx agent-cli.ts <name> --html <path>');
 			process.exit(1);
 		}
 		await run({ name, htmlPath });
@@ -21,7 +21,7 @@ async function main(): Promise<void> {
 	}
 
 	if (!flagOrUrl) {
-		console.error('Usage: tsx rf-cli.ts <name> <url> [--load-more "<selector>"] [--max-clicks N]');
+		console.error('Usage: tsx agent-cli.ts <name> <url> [--load-more "<selector>"] [--max-clicks N]');
 		process.exit(1);
 	}
 
@@ -42,8 +42,4 @@ main().catch((err) => {
 	console.error(err);
 	process.exit(1);
 });
-
-
-
-
 

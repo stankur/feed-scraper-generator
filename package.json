@@ -4,9 +4,9 @@
 	"main": "rf-scrape.js",
 	"scripts": {
 		"test": "vitest",
-		"rf": "tsx rf-cli.ts",
-		"rf-scrape": "node rf-scrape.js",
-		"rf-batch": "tsx rf-batch.ts"
+		"agent": "tsx agent-cli.ts",
+		"scraper": "tsx scraper-run.ts",
+		"agent-batch": "tsx agent-batch.ts"
 	},
 	"keywords": [],
 	"author": "",

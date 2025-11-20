@@ -1,4 +1,4 @@
-import { run } from "./rf.js";
+import { run } from "./agent-core";
 import fs from "node:fs/promises";
 
 type Job = {
@@ -11,7 +11,7 @@ type Job = {
 async function main(): Promise<void> {
 	const [, , configPath] = process.argv;
 	if (!configPath) {
-		console.error("Usage: tsx rf-batch.ts <jobs.json>");
+		console.error("Usage: tsx agent-batch.ts <jobs.json>");
 		process.exit(1);
 	}
 
@@ -36,3 +36,4 @@ main().catch((err) => {
 	console.error(err);
 	process.exit(1);
 });
+

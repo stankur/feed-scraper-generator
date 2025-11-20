@@ -1,11 +1,11 @@
-import { renderFetchToFile } from './render-fetch.js';
+import { renderFetchToFile } from './render-fetch';
 
 const [, , url, outPath, ...rest] = process.argv;
 
 async function main(): Promise<void> {
 	if (!url || !outPath) {
 		console.error(
-			'Usage: tsx fetch-cli.ts <url> <output-path> [--load-more "<selector>"] [--max-clicks N]'
+			'Usage: tsx html-fetch.ts <url> <output-path> [--load-more "<selector>"] [--max-clicks N]'
 		);
 		process.exit(1);
 	}
@@ -28,6 +28,4 @@ main().catch((err) => {
 	console.error(err);
 	process.exit(1);
 });
-
-
 

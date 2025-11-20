@@ -25,11 +25,9 @@ At this stage, we should only plan for the scraper, so after, the dir structure 
 Additional constraints and Load More verification:
 
 -   Allowed reads: no restriction.
--   Allowed edits/writes: Do not edit shared libs (`render-fetch.ts`, `rf.ts`, `rf-cli.ts`, `rf-scrape.ts`) or files outside `<name>_scraper/**`. Edits outside will be blocked.
+-   Allowed edits/writes: Do not edit shared libs (`render-fetch.ts`, `agent-core.ts`, `agent-cli.ts`, `scraper-run.ts`, `html-fetch.ts`) or files outside `<name>_scraper/**`. Edits outside will be blocked.
 -   If the blog uses a "Load more" button (not next-page navigation), identify a concrete CSS selector for it (e.g., `button.load-more, .load-more a`).
 -   Re-render the HTML with a small number of clicks to verify the selector works (do not write HTML directly; use the CLI):
-    -   `tsx rf-cli.ts <name> <url> --load-more "<CSS_SELECTOR>" --max-clicks 2`
-    -   or `npm run rf -- <name> <url> --load-more "<CSS_SELECTOR>" --max-clicks 2`
+    -   `npx tsx html-fetch.ts <url> outputs/html/<name>-verify.html --load-more "<CSS_SELECTOR>" --max-clicks 2`
+    -   please NEVER use agent-cli (e.g. do not use npx tsx agent-cli.ts)
 -   Verify success yourself: compare the number of post elements before vs after re-render (e.g., count `<article>`, `.post`, `.card`, or a repeated container). If counts didn't increase, try a better selector.
-
-

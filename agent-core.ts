@@ -11,7 +11,7 @@ import type {
 	PreToolUseHookInput,
 	PostToolUseHookInput,
 } from "@anthropic-ai/claude-agent-sdk";
-import { renderFetchToFile } from "./render-fetch.js";
+import { renderFetchToFile } from "./render-fetch";
 import fs from "node:fs/promises";
 import path from "node:path";
 
@@ -274,5 +274,4 @@ export async function run({
 	await fs.writeFile(runPath, JSON.stringify(runData, null, 2), "utf8");
 	console.log(`[run] wrote ${runPath}`);
 }
-
 

@@ -1,10 +1,19 @@
 import puppeteer from "puppeteer";
 import fs from "node:fs/promises";
+import fssync from "node:fs";
 import path from "node:path";
 import { unified } from "unified";
 import rehypeParse from "rehype-parse";
 import rehypeFormat from "rehype-format";
 import rehypeStringify from "rehype-stringify";
+
+const DEBUG_LOG = path.resolve(process.cwd(), "debug-render-fetch.log");
+
+function log(msg: string): void {
+	const line = `${new Date().toISOString()} ${msg}\n`;
+	fssync.appendFileSync(DEBUG_LOG, line);
+	console.log(msg);
+}
 
 interface RenderOptions {
 	loadMore?: string;
@@ -24,19 +33,26 @@ export async function renderFetch(
 	url: string,
 	options: RenderOptions = {}
 ): Promise<string> {
+	// Clear debug log at start of each run
+	fssync.writeFileSync(DEBUG_LOG, "");
+	log(`[render-fetch] START: ${url}`);
+	log(`[render-fetch] launching browser...`);
 	const browser = await puppeteer.launch({
 		headless: true,
 	});
+	log(`[render-fetch] browser launched`);
 
 	const page = await browser.newPage();
 	await page.setUserAgent(
 		"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36"
 	);
 
+	log(`[render-fetch] navigating to ${url}...`);
 	await page.goto(url, {
 		waitUntil: "networkidle0",
 		timeout: 30000,
 	});
+	log(`[render-fetch] page loaded`);
 
 	let lastHeight = await page.evaluate(
 		() => document.documentElement.scrollHeight
@@ -45,6 +61,9 @@ export async function renderFetch(
 	const maxIterations = 60;
 	const growthWaitMs = 1500;
 
+	log(
+		`[render-fetch] starting scroll loop (initial height: ${lastHeight}px)`
+	);
 	for (let i = 0; i < maxIterations; i++) {
 		await page.keyboard.press("End");
 		try {
@@ -58,7 +77,7 @@ export async function renderFetch(
 				() => document.documentElement.scrollHeight
 			);
 			discoveries++;
-			console.error(
+			log(
 				`[end-scroll] growth #${discoveries}: height -> ${lastHeight}px (iter ${
 					i + 1
 				})`
@@ -69,7 +88,7 @@ export async function renderFetch(
 				ih: window.innerHeight,
 				h: document.documentElement.scrollHeight,
 			}));
-			console.error(
+			log(
 				`[end-scroll] no growth after ${i + 1} iters (pos ${
 					y + ih
 				}/${h})`
@@ -82,7 +101,7 @@ export async function renderFetch(
 	const finalHeight = await page.evaluate(
 		() => document.documentElement.scrollHeight
 	);
-	console.error(
+	log(
 		`[end-scroll] done: final height=${finalHeight}px, discoveries=${discoveries}`
 	);
 
@@ -98,6 +117,9 @@ export async function renderFetch(
 		typeof options.maxClicks === "number" ? options.maxClicks : 30;
 	const waitAfterClickMs = 1500;
 
+	log(
+		`[render-fetch] load-more: selector="${selector}" maxClicks=${maxClicks}`
+	);
 	if (selector && maxClicks > 0) {
 		let clicks = 0;
 		for (; clicks < maxClicks; clicks++) {
@@ -118,19 +140,19 @@ export async function renderFetch(
 					return visible && enabled;
 				});
 				if (!ok) {
-					console.error(
+					log(
 						"[load-more] selector found but not visible/enabled; stopping"
 					);
 					break;
 				}
 				await page.click(selector, { delay: 20 });
-				console.error(
+				log(
 					`[load-more] click #${
 						clicks + 1
 					} using selector "${selector}"`
 				);
 			} catch {
-				console.error(
+				log(
 					"[load-more] selector not found or not clickable; stopping"
 				);
 				break;
@@ -146,23 +168,28 @@ export async function renderFetch(
 				const after = await page.evaluate(
 					() => document.documentElement.scrollHeight
 				);
-				console.error(
+				log(
 					`[load-more] growth detected: height ${before} -> ${after}`
 				);
 				// nudge viewport to bottom to help lazy load
 				await page.keyboard.press("End");
 			} catch {
-				console.error("[load-more] no growth after click; stopping");
+				log("[load-more] no growth after click; stopping");
 				break;
 			}
 		}
-		console.error(`[load-more] done: total clicks=${clicks}`);
+		log(`[load-more] done: total clicks=${clicks}`);
 	}
 
+	log(`[render-fetch] getting page content...`);
 	const html = await page.content();
 
+	log(`[render-fetch] closing browser...`);
 	await browser.close();
-	return await formatHtml(html);
+	log(`[render-fetch] formatting HTML...`);
+	const formatted = await formatHtml(html);
+	log(`[render-fetch] COMPLETE (${formatted.length} bytes)`);
+	return formatted;
 }
 
 export async function renderFetchToFile(
@@ -178,5 +205,4 @@ export async function renderFetchToFile(
 	await fs.writeFile(absPath, html, "utf8");
 	return absPath;
 }
-
 
