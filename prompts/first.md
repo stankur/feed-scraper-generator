@@ -31,3 +31,5 @@ Additional constraints and Load More verification:
     -   `tsx rf-cli.ts <name> <url> --load-more "<CSS_SELECTOR>" --max-clicks 2`
     -   or `npm run rf -- <name> <url> --load-more "<CSS_SELECTOR>" --max-clicks 2`
 -   Verify success yourself: compare the number of post elements before vs after re-render (e.g., count `<article>`, `.post`, `.card`, or a repeated container). If counts didn't increase, try a better selector.
+
+
