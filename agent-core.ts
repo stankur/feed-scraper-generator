@@ -28,6 +28,16 @@ type RunContext = {
 	grepPatterns: Set<string>;
 };
 
+const COST_LIMIT_USD = 0.5;
+
+function calculateCostFromUsage(usage: any): number {
+	const input = (usage.input_tokens || 0) * 0.000003;
+	const output = (usage.output_tokens || 0) * 0.000015;
+	const cacheRead = (usage.cache_read_input_tokens || 0) * 0.0000003;
+	const cacheCreate = (usage.cache_creation_input_tokens || 0) * 0.000003;
+	return input + output + cacheRead + cacheCreate;
+}
+
 async function extractPrompts(): Promise<{ first: string; second: string }> {
 	const first = await fs.readFile(path.resolve("prompts/first.md"), "utf8");
 	const second = await fs.readFile(path.resolve("prompts/second.md"), "utf8");
@@ -158,12 +168,61 @@ function withHooks(base: Options, name: string, ctx: RunContext): Options {
 async function streamOnce(
 	prompt: string,
 	options: Options,
-	tag: string
-): Promise<{ result: SDKResultMessage | null; sessionId: string | undefined }> {
-	const q = query({ prompt, options });
+	tag: string,
+	costLimit: number,
+	runningCost: { value: number }
+): Promise<{
+	result: SDKResultMessage | null;
+	sessionId: string | undefined;
+	aborted: boolean;
+}> {
+	const processedMessageIds = new Set<string>();
+	const abortController = new AbortController();
+	let turnCost = 0;
+
+	const opts = { ...options, abortController };
+	const q = query({ prompt, options: opts });
 	let result: SDKResultMessage | null = null;
 	let sessionId: string | undefined;
+
 	for await (const msg of q as unknown as AsyncGenerator<SDKMessage, void>) {
+		if (msg.type === "assistant") {
+			const assistantMsg = msg as any;
+			const messageId = assistantMsg.message?.id;
+
+			// Only count each message.id once (avoid duplicates - multiple messages share same id)
+			if (
+				messageId &&
+				!processedMessageIds.has(messageId) &&
+				assistantMsg.message?.usage
+			) {
+				processedMessageIds.add(messageId);
+				const stepCost = calculateCostFromUsage(
+					assistantMsg.message.usage
+				);
+				turnCost += stepCost;
+				runningCost.value += stepCost;
+
+				console.log(
+					`${tag} [cost] step=$${stepCost.toFixed(
+						4
+					)} turn=$${turnCost.toFixed(
+						4
+					)} total=$${runningCost.value.toFixed(4)}`
+				);
+
+				if (runningCost.value > costLimit) {
+					console.log(
+						`${tag} [ABORT] Cost $${runningCost.value.toFixed(
+							4
+						)} exceeds limit $${costLimit}`
+					);
+					abortController.abort();
+					return { result: null, sessionId, aborted: true };
+				}
+			}
+		}
+
 		switch (msg.type) {
 			case "system": {
 				const s = msg as SDKSystemMessage;
@@ -199,7 +258,7 @@ async function streamOnce(
 				break;
 		}
 	}
-	return { result, sessionId };
+	return { result, sessionId, aborted: false };
 }
 
 export async function run({
@@ -230,13 +289,22 @@ export async function run({
 		permissionMode: "bypassPermissions",
 	};
 
+	const runningCost = { value: 0 };
+
 	const ctx1: RunContext = { tools: new Set(), grepPatterns: new Set() };
 	const opts1 = withHooks(base, name, ctx1);
-	const { result: result1, sessionId } = await streamOnce(
-		firstMsg,
-		opts1,
-		"[T1]"
-	);
+	const {
+		result: result1,
+		sessionId,
+		aborted: aborted1,
+	} = await streamOnce(firstMsg, opts1, "[T1]", COST_LIMIT_USD, runningCost);
+
+	if (aborted1) {
+		console.log(
+			`[run] ❌ Aborted in T1 at cost $${runningCost.value.toFixed(4)}`
+		);
+		return;
+	}
 
 	if (!sessionId) {
 		throw new Error("Failed to get session ID from first turn");
@@ -244,11 +312,20 @@ export async function run({
 
 	const ctx2: RunContext = { tools: new Set(), grepPatterns: new Set() };
 	const opts2 = withHooks(base, name, ctx2);
-	const { result: result2 } = await streamOnce(
+	const { result: result2, aborted: aborted2 } = await streamOnce(
 		secondMsg,
 		{ ...opts2, resume: sessionId },
-		"[T2]"
+		"[T2]",
+		COST_LIMIT_USD,
+		runningCost
 	);
+
+	if (aborted2) {
+		console.log(
+			`[run] ❌ Aborted in T2 at cost $${runningCost.value.toFixed(4)}`
+		);
+		return;
+	}
 
 	// Write run.json
 	const cost1 = result1?.total_cost_usd ?? 0;
@@ -274,4 +351,3 @@ export async function run({
 	await fs.writeFile(runPath, JSON.stringify(runData, null, 2), "utf8");
 	console.log(`[run] wrote ${runPath}`);
 }
-

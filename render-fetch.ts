@@ -145,6 +145,20 @@ export async function renderFetch(
 					);
 					break;
 				}
+
+				// Scroll until button is in viewport
+				await page.evaluate((sel) => {
+					const el = document.querySelector(sel);
+					if (el) {
+						el.scrollIntoView({
+							behavior: "smooth",
+							block: "center",
+						});
+					}
+				}, selector);
+
+				await new Promise((resolve) => setTimeout(resolve, 500));
+
 				await page.click(selector, { delay: 20 });
 				await new Promise((resolve) => setTimeout(resolve, 2000));
 				log(
@@ -158,8 +172,6 @@ export async function renderFetch(
 			}
 
 			try {
-				// wait for page to grow, similar to scroll loop behavior
-				// eslint-disable-next-line no-new-func
 				await page.waitForFunction(
 					`document.documentElement.scrollHeight > ${before}`,
 					{ timeout: waitAfterClickMs }
@@ -170,8 +182,8 @@ export async function renderFetch(
 				log(
 					`[load-more] growth detected: height ${before} -> ${after}`
 				);
-				// nudge viewport to bottom to help lazy load
-				await page.keyboard.press("End");
+				// // nudge viewport to bottom to help lazy load
+				// await page.keyboard.press("End");
 			} catch {
 				log("[load-more] no growth after click; stopping");
 				break;
