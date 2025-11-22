@@ -44,3 +44,7 @@ I/O constraints:
 -   Logs are in `debug-render-fetch.log` if you need to debug if problems occur or need extra details.
 
 [warning] if you want to change the scraper to extract something using a regex pattern, test the regex pattern first, before incorporating to the scraper. only change the scraper once you are sure that the regex pattern work. Please take note of this because it often comes as tricky for you.
+
+If we have found that no pagination exist or is usable, and or, there is no load more, we don't need to verify testing wit 3 pages, just testing for 2 pages is enough. We want to minimize the number of agent turns.
+
+There is no need to output a final summary of what we've done. As long as you have got the scraper, and verified it, just finish, no need to give a summary.

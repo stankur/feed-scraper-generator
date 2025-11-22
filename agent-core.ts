@@ -28,7 +28,7 @@ type RunContext = {
 	grepPatterns: Set<string>;
 };
 
-const COST_LIMIT_USD = 0.5;
+const COST_LIMIT_USD = 2.5;
 
 function calculateCostFromUsage(usage: any): number {
 	const input = (usage.input_tokens || 0) * 0.000003;

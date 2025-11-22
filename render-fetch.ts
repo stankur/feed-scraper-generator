@@ -49,7 +49,7 @@ export async function renderFetch(
 
 	log(`[render-fetch] navigating to ${url}...`);
 	await page.goto(url, {
-		waitUntil: "networkidle0",
+		waitUntil: "domcontentloaded",
 		timeout: 30000,
 	});
 	log(`[render-fetch] page loaded`);
