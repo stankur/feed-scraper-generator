@@ -8,6 +8,16 @@ type Job = {
 	maxClicks?: number;
 };
 
+async function scraperExists(name: string): Promise<boolean> {
+	try {
+		const dirs = await fs.readdir(".");
+		const targetDir = `${name}_scraper`;
+		return dirs.some((d) => d.toLowerCase() === targetDir.toLowerCase());
+	} catch {
+		return false;
+	}
+}
+
 async function main(): Promise<void> {
 	const [, , configPath] = process.argv;
 	if (!configPath) {
@@ -22,18 +32,27 @@ async function main(): Promise<void> {
 		process.exit(1);
 	}
 
+	let processed = 0;
+	let skipped = 0;
+
 	// Sequential execution for clean output and proper session isolation
 	for (const job of jobs) {
+		if (await scraperExists(job.name)) {
+			console.log(`⏭️  Skipping ${job.name} (already exists)`);
+			skipped++;
+			continue;
+		}
+
 		console.log(`\n=== Starting ${job.name} ===`);
 		await run(job);
 		console.log(`\n=== Completed ${job.name} ===`);
+		processed++;
 	}
 
-	console.log("\n✓ All jobs completed");
+	console.log(`\n✓ Processed: ${processed}, Skipped: ${skipped}`);
 }
 
 main().catch((err) => {
 	console.error(err);
 	process.exit(1);
 });
-

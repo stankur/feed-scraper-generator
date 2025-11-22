@@ -268,6 +268,8 @@ export async function run({
 	loadMore,
 	maxClicks,
 }: RunArgs): Promise<void> {
+	const setupStart = performance.now();
+
 	const defaultOut = path.join("outputs", "html", `${name}.html`);
 	const html = htmlPath ?? defaultOut;
 	if (!htmlPath && url) {
@@ -291,6 +293,9 @@ export async function run({
 
 	const runningCost = { value: 0 };
 
+	const setupDuration = performance.now() - setupStart;
+	const cycle1Start = performance.now();
+
 	const ctx1: RunContext = { tools: new Set(), grepPatterns: new Set() };
 	const opts1 = withHooks(base, name, ctx1);
 	const {
@@ -298,6 +303,8 @@ export async function run({
 		sessionId,
 		aborted: aborted1,
 	} = await streamOnce(firstMsg, opts1, "[T1]", COST_LIMIT_USD, runningCost);
+
+	const cycle1Duration = performance.now() - cycle1Start;
 
 	if (aborted1) {
 		console.log(
@@ -312,6 +319,7 @@ export async function run({
 
 	const ctx2: RunContext = { tools: new Set(), grepPatterns: new Set() };
 	const opts2 = withHooks(base, name, ctx2);
+	const cycle2Start = performance.now();
 	const { result: result2, aborted: aborted2 } = await streamOnce(
 		secondMsg,
 		{ ...opts2, resume: sessionId },
@@ -319,6 +327,8 @@ export async function run({
 		COST_LIMIT_USD,
 		runningCost
 	);
+
+	const cycle2Duration = performance.now() - cycle2Start;
 
 	if (aborted2) {
 		console.log(
@@ -332,14 +342,18 @@ export async function run({
 	const cost2 = result2?.total_cost_usd ?? 0;
 	const runData = {
 		total_cost_usd: cost1 + cost2,
+		total_duration_s: (cycle1Duration + cycle2Duration) / 1000,
+		setup_duration_s: setupDuration / 1000,
 		first: {
 			cost_usd: cost1,
+			duration_s: cycle1Duration / 1000,
 			turns: result1?.num_turns ?? 0,
 			tools: Array.from(ctx1.tools).sort(),
 			grep_patterns: Array.from(ctx1.grepPatterns).sort(),
 		},
 		second: {
 			cost_usd: cost2,
+			duration_s: cycle2Duration / 1000,
 			turns: result2?.num_turns ?? 0,
 			tools: Array.from(ctx2.tools).sort(),
 			grep_patterns: Array.from(ctx2.grepPatterns).sort(),
