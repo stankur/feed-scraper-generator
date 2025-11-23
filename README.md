@@ -10,6 +10,16 @@ Install dependencies:
 npm install
 ```
 
+Python setup (for URL discovery):
+
+```bash
+uv init --lib --no-readme
+uv venv
+source .venv/bin/activate
+uv add browser-use langchain-anthropic python-dotenv
+uvx browser-use install
+```
+
 Create `.env`:
 
 ```
@@ -18,22 +28,29 @@ ANTHROPIC_API_KEY=sk-...
 
 ## Usage
 
-### Single Company
+### Discover Engineering Blog URLs
 
-Generate scraper from URL:
+```bash
+source .venv/bin/activate
+python discover-url.py <company>
+```
+
+Output saved to `<company>_urls.json`.
+
+### Generate Scraper from URL
 
 ```bash
 npm run agent -- <name> <url>
 npm run agent -- <name> <url> --load-more "<selector>" --max-clicks N
 ```
 
-Generate scraper from existing HTML:
+Or from existing HTML:
 
 ```bash
 npm run agent -- <name> --html <path>
 ```
 
-### Multiple Companies
+### Batch Processing
 
 Create `jobs.json`:
 
@@ -60,7 +77,12 @@ Agent creates `<name>_scraper/` containing:
 
 -   `scraper.ts` - Generated scraper code
 -   `<name>.json` - Example output (may be present)
--   `cost.json` - Cost/usage stats for both agent turns
+-   `run.json` - Cost/usage stats
+
+URL discovery creates:
+
+-   `<company>_urls.json` - Discovered URLs with categories
+-   `logs/<company>_conversation.json` - Full discovery conversation
 
 HTML snapshots saved to `outputs/html/<name>.html`
 

@@ -7,3 +7,11 @@ jobs.json
 debug-render-fetch.log
 browser-use
 
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+logs/
+*_urls.json
