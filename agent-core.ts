@@ -14,6 +14,7 @@ import type {
 import { renderFetchToFile } from "./render-fetch";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { startLogCapture } from "./log-capture";
 
 type RunArgs = {
 	name: string;
@@ -21,6 +22,14 @@ type RunArgs = {
 	htmlPath?: string;
 	loadMore?: string;
 	maxClicks?: number;
+	logFile?: string;
+};
+
+type RunResult = {
+	name: string;
+	success: boolean;
+	cost: number;
+	duration: number;
 };
 
 type RunContext = {
@@ -261,13 +270,21 @@ async function streamOnce(
 	return { result, sessionId, aborted: false };
 }
 
-export async function run({
+export async function run(args: RunArgs): Promise<RunResult> {
+	// If logFile is provided, wrap execution in log capture
+	if (args.logFile) {
+		return await startLogCapture(args.logFile, () => runImpl(args));
+	}
+	return await runImpl(args);
+}
+
+async function runImpl({
 	name,
 	url,
 	htmlPath,
 	loadMore,
 	maxClicks,
-}: RunArgs): Promise<void> {
+}: RunArgs): Promise<RunResult> {
 	const setupStart = performance.now();
 
 	const defaultOut = path.join("outputs", "html", `${name}.html`);
@@ -310,7 +327,12 @@ export async function run({
 		console.log(
 			`[run] ❌ Aborted in T1 at cost $${runningCost.value.toFixed(4)}`
 		);
-		return;
+		return {
+			name,
+			success: false,
+			cost: runningCost.value,
+			duration: cycle1Duration,
+		};
 	}
 
 	if (!sessionId) {
@@ -334,7 +356,12 @@ export async function run({
 		console.log(
 			`[run] ❌ Aborted in T2 at cost $${runningCost.value.toFixed(4)}`
 		);
-		return;
+		return {
+			name,
+			success: false,
+			cost: runningCost.value,
+			duration: cycle1Duration + cycle2Duration,
+		};
 	}
 
 	// Write run.json
@@ -364,4 +391,11 @@ export async function run({
 	await fs.mkdir(path.dirname(runPath), { recursive: true });
 	await fs.writeFile(runPath, JSON.stringify(runData, null, 2), "utf8");
 	console.log(`[run] wrote ${runPath}`);
+
+	return {
+		name,
+		success: true,
+		cost: cost1 + cost2,
+		duration: cycle1Duration + cycle2Duration,
+	};
 }

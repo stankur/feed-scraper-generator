@@ -5,6 +5,5 @@ outputs/
 *_scraper/
 jobs.json
 debug-render-fetch.log
-
-
+browser-use
 
