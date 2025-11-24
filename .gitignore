@@ -15,3 +15,5 @@ __pycache__/
 *.egg-info/
 logs/
 *_urls.json
+urls.json
+companies.json

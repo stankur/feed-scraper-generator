@@ -30,12 +30,26 @@ ANTHROPIC_API_KEY=sk-...
 
 ### Discover Engineering Blog URLs
 
+Single company:
+
 ```bash
 source .venv/bin/activate
 python discover-url.py <company>
 ```
 
 Output saved to `<company>_urls.json`.
+
+Batch discovery:
+
+```bash
+python discover-batch.py companies.json
+python discover-batch.py companies.json --concurrency 5
+python discover-batch.py companies.json --force
+```
+
+`companies.json` format: `["Temporal", "Stripe", "GitHub"]`
+
+Output: `urls.json` (updated incrementally), per-company logs in `logs/<company>_url_search/`
 
 ### Generate Scraper from URL
 
@@ -81,8 +95,11 @@ Agent creates `<name>_scraper/` containing:
 
 URL discovery creates:
 
--   `<company>_urls.json` - Discovered URLs with categories
--   `logs/<company>_conversation.json` - Full discovery conversation
+-   `<company>_urls.json` - Single company discovery
+-   `urls.json` - Batch discovery output (all companies)
+-   `logs/<company>_url_search/run.json` - Per-company metadata (cost, duration, URLs)
+-   `logs/<company>_url_search/run.log` - Full console output
+-   `logs/<company>_url_search/conversation.json` - Full agent conversation
 
 HTML snapshots saved to `outputs/html/<name>.html`
 
