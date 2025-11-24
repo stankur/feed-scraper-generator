@@ -6,7 +6,8 @@
 		"test": "vitest",
 		"agent": "tsx agent-cli.ts",
 		"scraper": "tsx scraper-run.ts",
-		"agent-batch": "tsx agent-batch.ts"
+		"agent-batch": "tsx agent-batch.ts",
+		"agent-from-urls": "tsx agent-from-urls.ts"
 	},
 	"keywords": [],
 	"author": "",

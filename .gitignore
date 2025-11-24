@@ -17,3 +17,4 @@ logs/
 *_urls.json
 urls.json
 companies.json
+.temp_jobs.json

@@ -85,6 +85,15 @@ Run batch:
 npm run agent-batch -- jobs.json
 ```
 
+Or generate scrapers directly from `urls.json`:
+
+```bash
+npm run agent-from-urls -- urls.json
+npm run agent-from-urls -- urls.json --limit 10 --concurrency 3
+```
+
+Automatically converts discovered URLs to scraper jobs, skipping existing scrapers.
+
 ## Outputs
 
 Agent creates `<name>_scraper/` containing:
